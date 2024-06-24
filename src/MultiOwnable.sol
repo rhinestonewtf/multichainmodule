@@ -7,6 +7,7 @@ import { SignatureCheckerLib } from "solady/utils/SignatureCheckerLib.sol";
 import { SentinelList4337Lib, SENTINEL } from "sentinellist/SentinelList4337.sol";
 import { LibSort } from "solady/utils/LibSort.sol";
 import { ECDSA } from "solady/utils/ECDSA.sol";
+import { FlatBytesLib } from "@rhinestone/flatbytes/src/BytesLib.sol";
 import "./SloadLib.sol";
 
 import "forge-std/console2.sol";
@@ -19,6 +20,7 @@ import "forge-std/console2.sol";
  */
 contract MultiChainValidator is ERC7579ValidatorBase {
     using SloadLib for *;
+    using FlatBytesLib for *;
 
     struct Owner {
         address owner;
@@ -26,14 +28,24 @@ contract MultiChainValidator is ERC7579ValidatorBase {
         uint48 validBefore;
     }
 
-    mapping(address account => Owner data) internal owners;
+    mapping(address account => FlatBytesLib.Bytes) internal owners;
+
+    address immutable L1SELF;
+
+    constructor(address L1Self) {
+        if (L1Self == address(0)) {
+            L1SELF = address(this);
+        } else {
+            L1SELF = L1Self;
+        }
+    }
 
     /*//////////////////////////////////////////////////////////////////////////
                                      CONFIG
     //////////////////////////////////////////////////////////////////////////*/
 
     function getOwnerSlot(address account) public view returns (bytes32 slot) {
-        Owner storage owner = owners[account];
+        FlatBytesLib.Bytes storage owner = owners[account];
         assembly {
             slot := owner.slot
         }
@@ -45,7 +57,13 @@ contract MultiChainValidator is ERC7579ValidatorBase {
      *
      * @param data encoded data containing the threshold and owners
      */
-    function onInstall(bytes calldata data) external override { }
+    function onInstall(bytes calldata data) external override {
+        if (data.length == 0) return;
+        Owner memory owner = abi.decode(data, (Owner));
+
+        FlatBytesLib.Bytes storage $local = owners[msg.sender];
+        $local.store(data);
+    }
 
     /**
      * Handles the uninstallation of the module and clears the threshold and owners
@@ -75,7 +93,10 @@ contract MultiChainValidator is ERC7579ValidatorBase {
      *
      * @param owner address of the owner to add
      */
-    function addOwner(address owner) external { }
+    function addOwner(Owner calldata owner) external {
+        FlatBytesLib.Bytes storage $local = owners[msg.sender];
+        $local.store(abi.encode(owner));
+    }
 
     /**
      * Removes an owner from the account
@@ -115,11 +136,9 @@ contract MultiChainValidator is ERC7579ValidatorBase {
         override
         returns (ValidationData)
     {
-        console2.log("validateUserOp");
-
         // todo use getSender lib
         bytes32 slot = getOwnerSlot(userOp.sender);
-        bytes memory value = SloadLib.retrieveFromL1(address(this), slot);
+        bytes memory value = SloadLib.sload(L1SELF, slot);
         Owner memory signer = abi.decode(value, (Owner));
 
         address recover = ECDSA.recover(ECDSA.toEthSignedMessageHash(userOpHash), userOp.signature);

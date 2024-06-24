@@ -44,7 +44,7 @@ contract MulitChainTest is RhinestoneModuleKit, Test {
         l1Sload = L1Sload(L1SLOAD_PRECOMPILE);
 
         // Create the validator
-        validator = new MultiChainValidator();
+        validator = new MultiChainValidator(address(0));
         vm.label(address(validator), "MultiChainValidator");
 
         // Create the account and install the validator
@@ -83,6 +83,40 @@ contract MulitChainTest is RhinestoneModuleKit, Test {
 
         // Set the signature
         userOpData.userOp.signature = signHash(signer.key, userOpData.userOpHash);
+
+        // Execute the UserOpprivKey
+        userOpData.execUserOps();
+
+        // Check if the balance of the target has increased
+        assertEq(target.balance, prevBalance + value);
+    }
+
+    function test_withLocalSigner() public {
+        testExec();
+
+        Account memory signer2 = makeAccount("signer2");
+
+        vm.prank(instance.account);
+        validator.addOwner(
+            MultiChainValidator.Owner({ owner: signer2.addr, validAfter: 0, validBefore: 0 })
+        );
+
+        address target = makeAddr("target");
+        uint256 value = 1 ether;
+
+        // Get the current balance of the target
+        uint256 prevBalance = target.balance;
+
+        // Get the UserOp data (UserOperation and UserOperationHash)
+        UserOpData memory userOpData = instance.getExecOps({
+            target: target,
+            value: value,
+            callData: "",
+            txValidator: address(validator)
+        });
+
+        // Set the signature
+        userOpData.userOp.signature = signHash(signer2.key, userOpData.userOpHash);
 
         // Execute the UserOpprivKey
         userOpData.execUserOps();
