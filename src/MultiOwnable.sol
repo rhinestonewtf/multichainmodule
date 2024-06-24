@@ -9,41 +9,35 @@ import { LibSort } from "solady/utils/LibSort.sol";
 import { ECDSA } from "solady/utils/ECDSA.sol";
 import "./SloadLib.sol";
 
+import "forge-std/console2.sol";
+
 /**
  * @title OwnableValidator
  * @dev Module that allows users to designate EOA owners that can validate transactions using a
  * threshold
  * @author Rhinestone
  */
-contract MulitChainValidator is ERC7579ValidatorBase {
+contract MultiChainValidator is ERC7579ValidatorBase {
     using SloadLib for *;
-    using LibSort for *;
-    using SignatureCheckerLib for address;
-    using SentinelList4337Lib for SentinelList4337Lib.SentinelList;
 
-    /*//////////////////////////////////////////////////////////////////////////
-                            CONSTANTS & STORAGE
-    //////////////////////////////////////////////////////////////////////////*/
+    struct Owner {
+        address owner;
+        uint48 validAfter;
+        uint48 validBefore;
+    }
 
-    error ThresholdNotSet();
-    error InvalidThreshold();
-    error NotSortedAndUnique();
-    error MaxOwnersReached();
-    error InvalidOwner(address owner);
-
-    // maximum number of owners per account
-    uint256 constant MAX_OWNERS = 32;
-
-    // account => owners
-    SentinelList4337Lib.SentinelList owners;
-    // account => threshold
-    mapping(address account => uint256) public threshold;
-    // account => ownerCount
-    mapping(address => uint256) public ownerCount;
+    mapping(address account => Owner data) internal owners;
 
     /*//////////////////////////////////////////////////////////////////////////
                                      CONFIG
     //////////////////////////////////////////////////////////////////////////*/
+
+    function getOwnerSlot(address account) public view returns (bytes32 slot) {
+        Owner storage owner = owners[account];
+        assembly {
+            slot := owner.slot
+        }
+    }
 
     /**
      * Initializes the module with the threshold and owners
@@ -118,10 +112,23 @@ contract MulitChainValidator is ERC7579ValidatorBase {
         bytes32 userOpHash
     )
         external
-        view
         override
         returns (ValidationData)
-    { }
+    {
+        console2.log("validateUserOp");
+
+        // todo use getSender lib
+        bytes32 slot = getOwnerSlot(userOp.sender);
+        bytes memory value = SloadLib.retrieveFromL1(address(this), slot);
+        Owner memory signer = abi.decode(value, (Owner));
+
+        address recover = ECDSA.recover(ECDSA.toEthSignedMessageHash(userOpHash), userOp.signature);
+        return _packValidationData({
+            sigFailed: recover != signer.owner,
+            validAfter: signer.validAfter,
+            validUntil: signer.validBefore
+        });
+    }
 
     /**
      * Validates an ERC-1271 signature with the sender

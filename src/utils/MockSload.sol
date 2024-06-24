@@ -1,23 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <0.9.0;
 
-contract MockL1Sload {
-    mapping(address => mapping(uint256 => bytes)) public refs;
+contract L1Sload {
+    mapping(address => mapping(bytes32 => bytes)) public refs;
 
-    function set(address contractAddr, uint256 slot, bytes memory data) public {
+    function set(address contractAddr, bytes32 slot, bytes memory data) public {
         refs[contractAddr][slot] = data;
     }
 
     fallback(bytes calldata data) external returns (bytes memory) {
-        (, address contractAddr, uint256 slot) = decodeData(data);
+        (, address contractAddr, bytes32 slot) = decodeData(data);
         return refs[contractAddr][slot];
     }
 
     // decode packaed data
-    function decodeData(bytes memory data) internal pure returns (uint256, address, uint256) {
+    function decodeData(bytes memory data) internal pure returns (uint256, address, bytes32) {
         uint256 x;
         address y;
-        uint256 z;
+        bytes32 z;
         assembly {
             x := mload(add(data, 0x20))
             y := mload(add(data, 0x34))

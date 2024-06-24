@@ -3,7 +3,7 @@ pragma solidity >=0.8.0 <0.9.0;
 
 import "../interfaces/IL1Blocks.sol";
 
-contract MockedL1Blocks is IL1Blocks {
+contract L1Blocks is IL1Blocks {
     uint256 internal constant MOCKED_BLOCK_NO = 10_000;
 
     function latestBlockNumber() external pure override returns (uint256) {
