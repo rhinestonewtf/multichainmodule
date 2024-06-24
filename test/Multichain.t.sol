@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
+import "src/utils/MockSload.sol";
 import { Test } from "forge-std/Test.sol";
 import {
     RhinestoneModuleKit,
@@ -12,23 +13,23 @@ import {
 import { MODULE_TYPE_VALIDATOR } from "modulekit/external/ERC7579.sol";
 import { ValidatorTemplate } from "src/ValidatorTemplate.sol";
 
-contract ValidatorTemplateTest is RhinestoneModuleKit, Test {
+contract MulitChainTest is RhinestoneModuleKit, Test {
     using ModuleKitHelpers for *;
     using ModuleKitUserOp for *;
 
     // account and modules
     AccountInstance internal instance;
-    ValidatorTemplate internal validator;
+    MultiChainValidator internal validator;
 
     function setUp() public {
         init();
 
         // Create the validator
-        validator = new ValidatorTemplate();
-        vm.label(address(validator), "ValidatorTemplate");
+        validator = new MultiChainValidator();
+        vm.label(address(validator), "MultiChainValidator");
 
         // Create the account and install the validator
-        instance = makeAccountInstance("ValidatorTemplate");
+        instance = makeAccountInstance("S1SloadAccount");
         vm.deal(address(instance.account), 10 ether);
         instance.installModule({
             moduleTypeId: MODULE_TYPE_VALIDATOR,
