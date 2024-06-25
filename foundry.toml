@@ -8,7 +8,9 @@ fs_permissions = [{ access = "read", path = "out-optimized" }, { access = "read-
 allow_paths = ["*", "/"]
 
 [rpc_endpoints]
-mainnet = "${MAINNET_RPC_URL}" 
+sepolia = "${MAINNET_RPC_URL}" 
+scroll-devnet = "https://l1sload-rpc.scroll.io"
+
 
 [fmt]
 bracket_spacing = true
@@ -19,3 +21,4 @@ number_underscore = "thousands"
 quote_style = "double"
 tab_width = 4
 wrap_comments = true
+
