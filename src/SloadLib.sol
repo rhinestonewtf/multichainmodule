@@ -13,15 +13,22 @@ library SloadLib {
         return l1BlockNum;
     }
 
-    function retrieveFromL1(address target, bytes32 slot) internal returns (bytes memory ret) {
+    function retrieveFromL1(
+        address target,
+        bytes32 slot
+    )
+        internal
+        view
+        returns (bytes memory ret)
+    {
         uint256 l1BlockNum = IL1Blocks(L1BLOCKS_PRECOMPILE).latestBlockNumber();
         bytes memory input = abi.encodePacked(l1BlockNum, target, slot);
         bool success;
-        (success, ret) = L1SLOAD_PRECOMPILE.call(input);
+        (success, ret) = L1SLOAD_PRECOMPILE.staticcall(input);
         require(success, "SloadLib: retrieveFromL1 failed");
     }
 
-    function sload(address target, bytes32 slot) internal returns (bytes memory ret) {
+    function sload(address target, bytes32 slot) internal view returns (bytes memory ret) {
         FlatBytesLib.Bytes storage local;
 
         assembly {

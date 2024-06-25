@@ -69,7 +69,10 @@ contract MultiChainValidator is ERC7579ValidatorBase {
      * Handles the uninstallation of the module and clears the threshold and owners
      * @dev the data parameter is not used
      */
-    function onUninstall(bytes calldata) external override { }
+    function onUninstall(bytes calldata) external override {
+        FlatBytesLib.Bytes storage $local = owners[msg.sender];
+        $local.clear();
+    }
 
     /**
      * Checks if the module is initialized
@@ -77,7 +80,11 @@ contract MultiChainValidator is ERC7579ValidatorBase {
      * @param smartAccount address of the smart account
      * @return true if the module is initialized, false otherwise
      */
-    function isInitialized(address smartAccount) public view returns (bool) { }
+    function isInitialized(address smartAccount) public view returns (bool) {
+        bytes32 slot = getOwnerSlot(smartAccount);
+        bytes memory value = SloadLib.sload(L1SELF, slot);
+        return value.length != 0;
+    }
 
     /**
      * Sets the threshold for the account
@@ -138,6 +145,7 @@ contract MultiChainValidator is ERC7579ValidatorBase {
     {
         // todo use getSender lib
         bytes32 slot = getOwnerSlot(userOp.sender);
+        // sload from L1, fallback if L1 has no data set
         bytes memory value = SloadLib.sload(L1SELF, slot);
         Owner memory signer = abi.decode(value, (Owner));
 
@@ -208,7 +216,7 @@ contract MultiChainValidator is ERC7579ValidatorBase {
      * @return name of the module
      */
     function name() external pure virtual returns (string memory) {
-        return "OwnableValidator";
+        return "OwnableValidatorL1Sload";
     }
 
     /**
